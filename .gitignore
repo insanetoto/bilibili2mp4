@@ -20,5 +20,10 @@ npm-debug.log*
 .env
 .env.local
 
+# Docs (keep README.md only)
+*.mdc
+*.md
+!README.md
+
 # Tauri generated (optional, gen/ can be committed for schema)
 # src-tauri/gen/
