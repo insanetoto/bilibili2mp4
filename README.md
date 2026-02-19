@@ -44,16 +44,11 @@ npx tauri icon path/to/your-icon.png
 
 ## 项目结构
 
-- `src/` — 前端（阶段 2 实现完整 UI）
+- `src/` — 前端
 - `src-tauri/src/` — Rust 后端
   - `cache/` — 缓存扫描与 entry.json 解析
   - `convert/` — MP4Box 转换
   - `filemgr/` — 输出路径、冲突处理
   - `config/` — 偏好配置
 
-## 阶段 1 完成项
-
-- [x] 项目初始化
-- [x] 缓存扫描与解析
-- [x] MP4Box 转换（标准 + :raw 备选）
-- [x] 文件管理与配置
+## 项目总共规划3个阶段，目前只完成了其中2个，基本能满足视频的批量转换需求，如有其他需求，可以留言，有时间了继续补充新功能
