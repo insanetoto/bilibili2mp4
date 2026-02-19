@@ -1,6 +1,6 @@
-# Bili2MP4
+# Bili2MP4 
 
-B 站缓存视频无损转换工具（macOS），基于 GPAC MP4Box 将 m4s 无损封装为标准 MP4。
+B 站缓存视频无损转换工具（macOS），基于 GPAC MP4Box 将 m4s 无损封装为标准 MP4。(AI编程练手项目)
 
 ## 环境要求
 
