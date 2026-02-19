@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Bili2MP4</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="toolbar">
+      <div class="toolbar-left">
+        <button id="btn-scan" type="button">扫描</button>
+        <button id="btn-select-dir" type="button">选择缓存目录</button>
+        <button id="btn-refresh" type="button">刷新</button>
+        <input type="text" id="search-input" placeholder="搜索视频..." class="search-input">
+      </div>
+      <div class="toolbar-right">
+        <select id="filter-quality">
+          <option value="">全部清晰度</option>
+        </select>
+      </div>
+    </header>
+    <main class="list-area">
+      <div id="list-empty" class="empty-state">
+        <p>📂 暂无缓存视频</p>
+        <p>请点击「选择缓存目录」或扫描默认路径</p>
+      </div>
+      <table id="video-table" class="video-table" style="display:none">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="check-all" title="全选"></th>
+            <th>标题</th>
+            <th>清晰度</th>
+            <th>大小</th>
+            <th>缓存日期</th>
+          </tr>
+        </thead>
+        <tbody id="video-tbody"></tbody>
+      </table>
+    </main>
+    <footer class="footer">
+      <div class="output-row">
+        <label>输出路径</label>
+        <input type="text" id="output-path" placeholder="选择输出目录">
+        <button id="btn-browse" type="button">浏览</button>
+      </div>
+      <div class="action-row">
+        <button id="btn-convert" type="button">开始转换</button>
+        <button id="btn-cancel" type="button" style="display:none">取消</button>
+      </div>
+      <div id="progress-area" class="progress-area" style="display:none">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <span id="progress-text"></span>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

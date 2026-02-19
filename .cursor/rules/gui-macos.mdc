@@ -1,0 +1,29 @@
+---
+description: GUI 与 macOS 人机交互规范（Tauri）
+globs: "src/**/*"
+alwaysApply: false
+---
+
+# GUI / macOS 规范
+
+## 架构
+- Tauri 单进程：前端通过 `invoke("command_name", { args })` 调用 Rust 命令
+- 进度更新：Rust 执行 convert 时通过 `app.emit("convert-progress", { file, percent })` 推送
+- 前端通过 `listen("convert-progress", callback)` 订阅
+- 不引入 RPC、WebSocket 等重量级通信
+
+## 布局
+- 顶部：工具栏（扫描、选择目录、刷新、筛选）
+- 中部：视频列表（多列可排序，每行复选框）
+- 底部：输出路径、开始转换、进度条
+
+## 交互
+- 支持拖拽文件夹指定缓存目录（Tauri 的 `on_drop` 或前端 drop 事件 + 传给 Rust）
+- 转换期间禁用操作，支持取消
+- 完成后可选：打开输出文件夹、播放、仅通知
+- 遵循 macOS HIG，支持深色模式
+- 快捷键：Cmd+A 全选、Cmd+Shift+A 反选、Cmd+R 刷新
+
+## 异常提示
+- 文件缺失、损坏、权限不足：友好提示，不 panic
+- 转换失败时记录日志，继续处理下一项

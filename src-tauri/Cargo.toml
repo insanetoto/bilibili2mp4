@@ -1,0 +1,25 @@
+[package]
+name = "bili2mp4"
+version = "0.1.0"
+default-run = "bili2mp4"
+description = "B站缓存视频无损转换工具"
+authors = ["Bili2MP4"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+thiserror = "2"
+anyhow = "1"
+dirs = "5"
+chrono = { version = "0.4", features = ["serde"] }

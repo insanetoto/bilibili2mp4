@@ -1,0 +1,22 @@
+---
+description: 缓存解析与 m4s 定位规范
+globs: "src-tauri/src/cache/**/*.rs"
+alwaysApply: false
+---
+
+# 缓存解析规范
+
+## 元数据格式
+- **entry.json**（旧版）：含 `title`、`page_data`、`type_tag`、`quality`
+- **videoInfo.json** / `.videoInfo`（新版 macOS）：含 `itemId`、`title`、`tabName`、`p`、`qn`
+
+## m4s 查找
+- **旧版**：在 `64`、`80`、`32`、`16` 等子目录找 `video.m4s`、`audio.m4s`
+- **新版**：同目录下 `{itemId}-1-{codec}.m4s`，按 codec 数字降序排列，索引 0 为视频、1 为音频
+
+## 清晰度映射
+- `type_tag`：`s_1080p`、`s_720p` 等 → 1080P、720P
+- `qn`（新版）：80→720P60，112→1080P，74→720P 等
+
+## 注意
+- 9 字节头部去除在 **convert** 模块执行，parser 只负责定位文件路径

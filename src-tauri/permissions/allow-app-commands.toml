@@ -1,0 +1,15 @@
+# 应用自定义命令的 invoke 权限
+[[permission]]
+identifier = "allow-app-commands"
+description = "允许调用 Bili2MP4 应用命令"
+commands.allow = [
+    "scan_cache",
+    "convert",
+    "cancel_convert",
+    "get_config",
+    "set_config",
+    "default_cache_paths",
+    "default_output_dir",
+    "default_cache_dialog_path",
+    "report_test_result"
+]
