@@ -56,3 +56,38 @@ pub fn resolve_output_path(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_overwrite() {
+        let out = std::env::temp_dir().join("bili2mp4_test_overwrite");
+        std::fs::create_dir_all(&out).ok();
+        let p = resolve_output_path(&out, "test", ConflictStrategy::Overwrite).unwrap();
+        assert!(p.ends_with("test.mp4"));
+    }
+
+    #[test]
+    fn test_resolve_rename() {
+        let out = std::env::temp_dir().join("bili2mp4_test_rename");
+        std::fs::create_dir_all(&out).ok();
+        let existing = out.join("video.mp4");
+        std::fs::write(&existing, b"").ok();
+        let p = resolve_output_path(&out, "video", ConflictStrategy::Rename).unwrap();
+        assert!(p.ends_with("video(1).mp4"));
+        std::fs::remove_file(existing).ok();
+    }
+
+    #[test]
+    fn test_resolve_skip() {
+        let out = std::env::temp_dir().join("bili2mp4_test_skip");
+        std::fs::create_dir_all(&out).ok();
+        let existing = out.join("exists.mp4");
+        std::fs::write(&existing, b"").ok();
+        let r = resolve_output_path(&out, "exists", ConflictStrategy::Skip);
+        assert!(r.is_err());
+        std::fs::remove_file(existing).ok();
+    }
+}

@@ -274,3 +274,37 @@ pub fn convert_one_raw(
 
     Ok(output_path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::io::Write;
+
+    #[test]
+    fn test_ensure_clean_m4s_no_header() {
+        let tmp = std::env::temp_dir().join("bili2mp4_m4s_test");
+        fs::create_dir_all(&tmp).ok();
+        let p = tmp.join("video.m4s");
+        fs::write(&p, b"not_0x30_padding").ok();
+        let (out, cleaned) = ensure_clean_m4s(&p).unwrap();
+        assert!(!cleaned);
+        assert_eq!(out, p);
+    }
+
+    #[test]
+    fn test_ensure_clean_m4s_with_padding() {
+        let tmp = std::env::temp_dir().join("bili2mp4_m4s_test2");
+        fs::create_dir_all(&tmp).ok();
+        let p = tmp.join("video2.m4s");
+        let mut f = fs::File::create(&p).unwrap();
+        f.write_all(&[0x30u8; 9]).unwrap();
+        f.write_all(b"rest_of_file").unwrap();
+        drop(f);
+        let (out, cleaned) = ensure_clean_m4s(&p).unwrap();
+        assert!(cleaned);
+        assert_ne!(out, p);
+        let content = fs::read(&out).unwrap();
+        assert_eq!(content, b"rest_of_file");
+    }
+}

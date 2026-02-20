@@ -25,3 +25,24 @@ pub fn output_path(out_dir: &std::path::Path, title: &str) -> PathBuf {
     let name = sanitize_filename(title);
     out_dir.join(format!("{}.mp4", name))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_sanitize_filename() {
+        assert_eq!(sanitize_filename("正常标题"), "正常标题");
+        assert_eq!(sanitize_filename("a/b\\c"), "abc");
+        assert_eq!(sanitize_filename("  trim  "), "trim");
+        assert_eq!(sanitize_filename(""), "未命名");
+        assert_eq!(sanitize_filename("   "), "未命名");
+    }
+
+    #[test]
+    fn test_output_path() {
+        let out = Path::new("/tmp");
+        assert_eq!(output_path(out, "测试").to_str().unwrap(), "/tmp/测试.mp4");
+    }
+}

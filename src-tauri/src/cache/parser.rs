@@ -63,7 +63,7 @@ pub fn parse_video_info(info_path: &Path) -> Result<VideoInfo, ParseError> {
         .or(info.title)
         .unwrap_or_else(|| "未知标题".to_string());
 
-    let quality = qn_to_quality(info.qn).unwrap_or_else(|| "未知".to_string());
+    let quality = _qn_to_quality(info.qn).unwrap_or_else(|| "未知".to_string());
 
     let page = info.p.unwrap_or(1);
     let total_pages = 1.max(page);
@@ -167,8 +167,8 @@ pub fn parse_entry(entry_path: &Path) -> Result<VideoInfo, ParseError> {
         .or(entry.title.clone())
         .unwrap_or_else(|| "未知标题".to_string());
 
-    let quality = type_tag_to_quality(entry.type_tag.as_deref())
-        .or_else(|| quality_to_str(entry.quality))
+    let quality = _type_tag_to_quality(entry.type_tag.as_deref())
+        .or_else(|| _quality_to_str(entry.quality))
         .unwrap_or_else(|| "未知".to_string());
 
     let page = entry.page_data.as_ref().and_then(|p| p.page).unwrap_or(1);
@@ -280,7 +280,12 @@ fn find_m4s_files(cache_dir: &Path) -> Result<(PathBuf, PathBuf), ParseError> {
     Ok((video_path.unwrap(), audio_path.unwrap()))
 }
 
-fn type_tag_to_quality(tag: Option<&str>) -> Option<String> {
+#[cfg(test)]
+pub(crate) fn type_tag_to_quality(tag: Option<&str>) -> Option<String> {
+    _type_tag_to_quality(tag)
+}
+
+fn _type_tag_to_quality(tag: Option<&str>) -> Option<String> {
     let s = tag?;
     Some(match s {
         "s_1080p" | "1080" => "1080P".to_string(),
@@ -295,11 +300,11 @@ fn type_tag_to_quality(tag: Option<&str>) -> Option<String> {
     })
 }
 
-fn quality_to_str(q: Option<u32>) -> Option<String> {
+fn _quality_to_str(q: Option<u32>) -> Option<String> {
     q.map(|n| format!("{}P", n))
 }
 
-fn qn_to_quality(qn: Option<u32>) -> Option<String> {
+fn _qn_to_quality(qn: Option<u32>) -> Option<String> {
     qn.map(|n| match n {
         120 => "1080P+".to_string(),
         116 => "1080P60".to_string(),
@@ -311,4 +316,36 @@ fn qn_to_quality(qn: Option<u32>) -> Option<String> {
         16 => "240P".to_string(),
         _ => format!("{}P", n),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_type_tag_to_quality() {
+        assert_eq!(type_tag_to_quality(Some("s_1080p")), Some("1080P".into()));
+        assert_eq!(type_tag_to_quality(Some("s_720p")), Some("720P".into()));
+        assert_eq!(type_tag_to_quality(Some("xxx")), Some("xxx".into()));
+        assert_eq!(type_tag_to_quality(None), None);
+    }
+
+    #[test]
+    fn test_parse_entry_with_mock_files() {
+        let tmp = std::env::temp_dir().join("bili2mp4_parse_test");
+        fs::create_dir_all(&tmp).ok();
+        let sub = tmp.join("80");
+        fs::create_dir_all(&sub).ok();
+        fs::write(sub.join("video.m4s"), b"x").ok();
+        fs::write(sub.join("audio.m4s"), b"x").ok();
+        let entry = r#"{"title":"测试","page_data":{"page":1,"part":"Part1"},"type_tag":"s_1080p"}"#;
+        fs::write(tmp.join("entry.json"), entry).ok();
+        let r = parse_entry(&tmp.join("entry.json"));
+        assert!(r.is_ok(), "{:?}", r.err());
+        let v = r.unwrap();
+        assert_eq!(v.title, "Part1");
+        assert_eq!(v.quality, "1080P");
+        fs::remove_dir_all(&tmp).ok();
+    }
 }

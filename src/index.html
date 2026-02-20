@@ -46,6 +46,14 @@
         <input type="text" id="output-path" placeholder="选择输出目录">
         <button id="btn-browse" type="button">浏览</button>
       </div>
+      <div class="options-row">
+        <label>文件冲突</label>
+        <select id="conflict-strategy" title="输出文件已存在时的处理方式">
+          <option value="rename">自动重命名</option>
+          <option value="overwrite">覆盖</option>
+          <option value="skip">跳过</option>
+        </select>
+      </div>
       <div class="action-row">
         <button id="btn-convert" type="button">开始转换</button>
         <button id="btn-cancel" type="button" style="display:none">取消</button>

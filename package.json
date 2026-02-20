@@ -1,6 +1,6 @@
 {
   "name": "bili2mp4",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "B站缓存视频无损转换工具",
   "scripts": {
     "tauri": "tauri",

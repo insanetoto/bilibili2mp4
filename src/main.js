@@ -190,6 +190,12 @@ document.getElementById('video-tbody').addEventListener('click', (e) => {
 });
 
 document.getElementById('filter-quality').addEventListener('change', renderList);
+document.getElementById('conflict-strategy').addEventListener('change', async (e) => {
+  try {
+    const config = await invoke('get_config');
+    await invoke('set_config', { config: { ...config, conflict_strategy: e.target.value } });
+  } catch (_) {}
+});
 document.getElementById('search-input').addEventListener('input', debounce(renderList, 200));
 document.getElementById('search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -227,8 +233,9 @@ async function doConvert() {
 
   try {
     const config = await invoke('get_config');
+    const conflictStrategy = document.getElementById('conflict-strategy').value;
     await invoke('set_config', {
-      config: { ...config, output_dir: outDir }
+      config: { ...config, output_dir: outDir, conflict_strategy: conflictStrategy }
     });
 
     const paths = await invoke('convert', { items, outDir });
@@ -298,6 +305,8 @@ listen('run-test-convert', async () => {
       const out = await invoke('default_output_dir');
       if (out) document.getElementById('output-path').value = out;
     }
+    const cs = document.getElementById('conflict-strategy');
+    if (cs && config.conflict_strategy) cs.value = config.conflict_strategy;
     await scanDefault();
     updateConvertState();
   } catch (e) {
