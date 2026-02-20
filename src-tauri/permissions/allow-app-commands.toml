@@ -11,5 +11,6 @@ commands.allow = [
     "default_cache_paths",
     "default_output_dir",
     "default_cache_dialog_path",
+    "open_folder",
     "report_test_result"
 ]

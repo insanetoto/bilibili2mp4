@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
-import { open as shellOpen } from '@tauri-apps/plugin-shell';
 
 let cacheDir = null;
 let videos = [];
@@ -230,6 +229,12 @@ async function doConvert() {
   document.getElementById('progress-area').style.display = 'block';
   document.getElementById('progress-fill').style.width = '0%';
   document.getElementById('progress-text').textContent = '准备中...';
+  if (document.getElementById('log-mode').checked) {
+    document.getElementById('log-area').style.display = 'flex';
+    const logEl = document.getElementById('log-content');
+    if (logEl) logEl.innerHTML = '';
+    appendLog('info', '准备转换...');
+  }
 
   try {
     const config = await invoke('get_config');
@@ -244,10 +249,15 @@ async function doConvert() {
     const cfg = await invoke('get_config');
     if (cfg.on_complete === 'open_folder' || !cfg.on_complete) {
       if (paths.length > 0) {
-        await shellOpen(outDir);
+        try {
+          await invoke('open_folder', { path: outDir });
+        } catch (e) {
+          appendLog('warn', '打开输出文件夹失败: ' + String(e));
+        }
       }
     }
   } catch (e) {
+    if (document.getElementById('log-mode').checked) appendLog('error', '转换失败: ' + String(e));
     alert('转换失败: ' + String(e));
   } finally {
     converting = false;
@@ -265,6 +275,31 @@ document.getElementById('btn-convert').addEventListener('click', () => {
 
 document.getElementById('btn-cancel').addEventListener('click', async () => {
   await invoke('cancel_convert');
+});
+
+document.getElementById('log-mode').addEventListener('change', (e) => {
+  document.getElementById('log-area').style.display = e.target.checked ? 'flex' : 'none';
+});
+
+document.getElementById('btn-clear-log').addEventListener('click', () => {
+  const el = document.getElementById('log-content');
+  if (el) el.innerHTML = '';
+});
+
+function appendLog(level, message) {
+  if (!document.getElementById('log-mode').checked) return;
+  const el = document.getElementById('log-content');
+  if (!el) return;
+  const line = document.createElement('div');
+  line.className = 'log-line' + (level === 'error' ? ' error' : level === 'warn' ? ' warn' : '');
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+listen('convert-log', (e) => {
+  const { level, message } = e.payload || {};
+  appendLog(level || 'info', message || String(e.payload));
 });
 
 listen('convert-progress', (e) => {

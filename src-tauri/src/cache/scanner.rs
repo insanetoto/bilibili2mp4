@@ -13,17 +13,47 @@ pub enum ScanError {
     Parse(#[from] super::parser::ParseError),
 }
 
-/// 默认 B 站 macOS 缓存路径
+/// 默认 B 站缓存路径（macOS / Windows）
 pub fn default_cache_paths() -> Vec<PathBuf> {
-    dirs::home_dir()
-        .map(|home| {
-            vec![
-                home.join("Movies/bilibili"),
-                home.join("Movies/Bilibili"),
-                home.join("Library/Containers/com.bilibili.bilibili/Data/Download"),
-            ]
-        })
-        .unwrap_or_default()
+    #[cfg(target_os = "macos")]
+    {
+        dirs::home_dir()
+            .map(|home| {
+                vec![
+                    home.join("Movies/bilibili"),
+                    home.join("Movies/Bilibili"),
+                    home.join("Library/Containers/com.bilibili.bilibili/Data/Download"),
+                ]
+            })
+            .unwrap_or_default()
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut paths = Vec::new();
+        if let Some(local) = dirs::data_local_dir() {
+            paths.push(local.join("bilibili").join("download"));
+            if let Ok(entries) = std::fs::read_dir(local.join("Packages")) {
+                for e in entries.filter_map(|e| e.ok()) {
+                    let name = e.file_name();
+                    if let Some(s) = name.to_str() {
+                        if s.starts_with("Microsoft.48666Bilibili") {
+                            let download = e.path().join("LocalState").join("download");
+                            paths.push(download);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        paths
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let _ = PathBuf::new();
+        Vec::new()
+    }
 }
 
 /// 扫描指定目录，返回所有可解析的视频

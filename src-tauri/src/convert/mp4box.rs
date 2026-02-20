@@ -157,6 +157,7 @@ pub fn convert_one(
 pub fn convert_one_ffmpeg(
     video: &VideoInfo,
     out_dir: &Path,
+    ffmpeg_path: &str,
     strategy: ConflictStrategy,
     cancel: &AtomicBool,
 ) -> Result<std::path::PathBuf, ConvertError> {
@@ -180,7 +181,7 @@ pub fn convert_one_ffmpeg(
     let out_str = output_path.to_string_lossy();
 
     // ffmpeg -y -i video.m4s -i audio.m4s -c copy -movflags +faststart output.mp4
-    let output = Command::new("ffmpeg")
+    let output = Command::new(ffmpeg_path)
         .args(["-y", "-i", &video_str, "-i", &audio_str, "-c", "copy", "-movflags", "+faststart", &out_str])
         .output()
         .map_err(|_| ConvertError::Mp4BoxFailed("ffmpeg 未找到，请安装: brew install ffmpeg".to_string()))?;

@@ -1,6 +1,6 @@
 [package]
 name = "bili2mp4"
-version = "1.0.0"
+version = "1.1.0"
 default-run = "bili2mp4"
 description = "B站缓存视频无损转换工具"
 authors = ["Bili2MP4"]

@@ -55,12 +55,20 @@
         </select>
       </div>
       <div class="action-row">
+        <label class="log-mode-label">
+          <input type="checkbox" id="log-mode" title="勾选后显示转换过程日志">
+          日志模式
+        </label>
         <button id="btn-convert" type="button">开始转换</button>
         <button id="btn-cancel" type="button" style="display:none">取消</button>
       </div>
       <div id="progress-area" class="progress-area" style="display:none">
         <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
         <span id="progress-text"></span>
+      </div>
+      <div id="log-area" class="log-area" style="display:none">
+        <div id="log-content"></div>
+        <button id="btn-clear-log" type="button" class="btn-clear-log">清空日志</button>
       </div>
     </footer>
   </div>

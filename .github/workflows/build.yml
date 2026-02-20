@@ -1,0 +1,67 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            rust_target: aarch64-apple-darwin
+          - platform: macos-latest
+            rust_target: x86_64-apple-darwin
+          - platform: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build
+        run: npm run tauri build
+        env:
+          TAURI_TARGET: ${{ matrix.rust_target }}
+
+      - name: Upload artifact (macOS aarch64)
+        if: matrix.platform == 'macos-latest' && matrix.rust_target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bili2mp4-macos-aarch64
+          path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/*.dmg
+
+      - name: Upload artifact (macOS x64)
+        if: matrix.platform == 'macos-latest' && matrix.rust_target == 'x86_64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bili2mp4-macos-x64
+          path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/*.dmg
+
+      - name: Upload artifact (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bili2mp4-windows-x64
+          path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/

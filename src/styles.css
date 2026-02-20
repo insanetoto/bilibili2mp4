@@ -144,7 +144,9 @@ body {
   background: var(--surface);
   color: var(--text);
 }
-.action-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.action-row { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.log-mode-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; user-select: none; }
+.log-mode-label input { cursor: pointer; }
 .footer button {
   padding: 8px 20px;
   font-size: 14px;
@@ -174,3 +176,37 @@ body {
   transition: width 0.2s;
 }
 #progress-text { font-size: 12px; color: var(--text-muted); }
+
+.log-area {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  max-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+#log-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 12px;
+  font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.log-line { margin: 2px 0; }
+.log-line.error { color: #e74c3c; }
+.log-line.warn { color: #f39c12; }
+.btn-clear-log {
+  align-self: flex-end;
+  margin: 4px 8px 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-clear-log:hover { color: var(--text); background: rgba(0,0,0,0.04); }

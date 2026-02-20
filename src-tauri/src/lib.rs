@@ -6,7 +6,7 @@ pub mod convert;
 pub mod filemgr;
 
 use cache::{scan, VideoInfo};
-use config::{load_config, resolve_mp4box_path, save_config, AppConfig};
+use config::{load_config, resolve_ffmpeg_path, resolve_mp4box_path, save_config, AppConfig};
 use convert::{convert_one, convert_one_raw, convert_one_ffmpeg, ConvertError, ConvertProgress};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -38,6 +38,7 @@ async fn convert(
 ) -> Result<Vec<String>, String> {
     let config = load_config();
     let mp4box = resolve_mp4box_path(&config);
+    let ffmpeg = resolve_ffmpeg_path();
     let strategy = config.conflict_strategy();
     let out_path = PathBuf::from(&out_dir);
 
@@ -53,6 +54,37 @@ async fn convert(
         *guard = Some(Arc::clone(&cancel));
     }
 
+    let mp4box_note = if mp4box == "MP4Box" || mp4box == "MP4Box.exe" {
+        #[cfg(target_os = "macos")]
+        { " (未找到，请 brew install gpac)" }
+        #[cfg(target_os = "windows")]
+        { " (未找到，请安装 GPAC 或配置路径)" }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        { " (未找到)" }
+    } else {
+        ""
+    };
+    let _ = app.emit("convert-log", serde_json::json!({
+        "level": if mp4box == "MP4Box" || mp4box == "MP4Box.exe" { "warn" } else { "info" },
+        "message": format!("MP4Box 路径: {}{}", mp4box, mp4box_note)
+    }));
+    let ffmpeg_note = if ffmpeg == "ffmpeg" || ffmpeg == "ffmpeg.exe" {
+        #[cfg(target_os = "macos")]
+        { " (未找到，兜底时需 brew install ffmpeg)" }
+        #[cfg(target_os = "windows")]
+        { " (未找到，兜底时需安装 ffmpeg)" }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        { " (未找到)" }
+    } else {
+        ""
+    };
+    let _ = app.emit("convert-log", serde_json::json!({
+        "level": if ffmpeg == "ffmpeg" || ffmpeg == "ffmpeg.exe" { "warn" } else { "info" },
+        "message": format!("ffmpeg 路径: {}{}", ffmpeg, ffmpeg_note)
+    }));
+    let _ = app.emit("convert-log", serde_json::json!({ "level": "info", "message": format!("输出目录: {}", out_path.display()) }));
+    let _ = app.emit("convert-log", serde_json::json!({ "level": "info", "message": "--- 开始转换 ---" }));
+
     let app_clone = app.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
         let mut success_paths = Vec::new();
@@ -60,6 +92,7 @@ async fn convert(
 
         for (i, video) in items.into_iter().enumerate() {
             if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "warn", "message": "用户取消" }));
                 break;
             }
 
@@ -73,9 +106,20 @@ async fn convert(
                 let _ = app_clone.emit("convert-progress", &payload);
             };
 
+            let _ = app_clone.emit("convert-log", serde_json::json!({
+                "level": "info",
+                "message": format!("[{}/{}] 正在转换: {}", i + 1, total, video.title)
+            }));
+
             match convert_one(&video, &out_path, &mp4box, strategy, &progress, &*cancel) {
-                Ok(path) => success_paths.push(path.display().to_string()),
-                Err(ConvertError::Mp4BoxFailed(_)) => {
+                Ok(path) => {
+                    let s = path.display().to_string();
+                    let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": format!("  ✓ 成功: {}", s) }));
+                    success_paths.push(s);
+                }
+                Err(ConvertError::Mp4BoxFailed(e)) => {
+                    let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "warn", "message": format!("  MP4Box 失败: {}", e) }));
+                    let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": "  尝试 :raw 模式..." }));
                     let ok = convert_one_raw(
                         &video,
                         &out_path,
@@ -83,18 +127,37 @@ async fn convert(
                         strategy,
                         &progress,
                         &*cancel,
-                    )
-                    .or_else(|_| convert_one_ffmpeg(&video, &out_path, strategy, &*cancel));
-                    if let Ok(p) = ok {
-                        success_paths.push(p.display().to_string());
+                    );
+                    match &ok {
+                        Ok(p) => {
+                            let s = p.display().to_string();
+                            let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": format!("  ✓ raw 成功: {}", s) }));
+                            success_paths.push(s);
+                        }
+                        Err(e) => {
+                            let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "warn", "message": format!("  raw 失败: {}", e) }));
+                            let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": "  尝试 ffmpeg 兜底..." }));
+                            if let Ok(p) = convert_one_ffmpeg(&video, &out_path, &ffmpeg, strategy, &*cancel) {
+                                let s = p.display().to_string();
+                                let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": format!("  ✓ ffmpeg 成功: {}", s) }));
+                                success_paths.push(s);
+                            } else {
+                                let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "error", "message": format!("  ✗ ffmpeg 也失败") }));
+                            }
+                        }
                     }
                 }
-                Err(ConvertError::Skipped(_)) => {}
+                Err(ConvertError::Skipped(_)) => {
+                    let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": "  跳过 (输出文件已存在)" }));
+                }
                 Err(ConvertError::Cancelled) => break,
-                Err(_) => {}
+                Err(e) => {
+                    let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "error", "message": format!("  ✗ 失败: {}", e) }));
+                }
             }
         }
 
+        let _ = app_clone.emit("convert-log", serde_json::json!({ "level": "info", "message": format!("--- 完成，成功 {} 个 ---", success_paths.len()) }));
         success_paths
     })
     .await
@@ -145,17 +208,59 @@ fn default_output_dir() -> Option<String> {
 #[tauri::command]
 fn report_test_result(_success: bool, _message: String) {}
 
-/// 选择缓存目录对话框的默认路径：~/Movies/bilibili 存在则用，否则 ~/Documents
+/// 在资源管理器中打开文件夹（macOS: open，Windows: explorer）
+#[tauri::command]
+fn open_folder(path: String) -> Result<(), String> {
+    let status = {
+        #[cfg(target_os = "macos")]
+        {
+            std::process::Command::new("open").arg(&path).spawn()
+        }
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer").arg(&path).spawn()
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            let _ = path;
+            return Err("当前平台暂不支持打开文件夹".to_string());
+        }
+    };
+    status.map_err(|e| format!("无法打开文件夹: {}", e))?;
+    Ok(())
+}
+
+/// 选择缓存目录对话框的默认路径
 #[tauri::command]
 fn default_cache_dialog_path() -> Option<String> {
     let home = dirs::home_dir()?;
-    let bilibili = home.join("Movies/bilibili");
-    if bilibili.exists() {
-        return bilibili.to_str().map(String::from);
+    #[cfg(target_os = "macos")]
+    {
+        let bilibili = home.join("Movies/bilibili");
+        if bilibili.exists() {
+            return bilibili.to_str().map(String::from);
+        }
+        let alt = home.join("Movies/Bilibili");
+        if alt.exists() {
+            return alt.to_str().map(String::from);
+        }
     }
-    let alt = home.join("Movies/Bilibili");
-    if alt.exists() {
-        return alt.to_str().map(String::from);
+    #[cfg(target_os = "windows")]
+    {
+        let local = dirs::data_local_dir()?;
+        let bilibili = local.join("bilibili").join("download");
+        if bilibili.exists() {
+            return bilibili.to_str().map(String::from);
+        }
+        if let Some(p) = std::fs::read_dir(local.join("Packages")).ok().and_then(|d| {
+            d.filter_map(|e| e.ok())
+                .find(|e| e.file_name().to_str().map(|s| s.starts_with("Microsoft.48666Bilibili")).unwrap_or(false))
+        }) {
+            let sub = p.path().join("LocalState").join("download");
+            if sub.exists() {
+                return sub.to_str().map(String::from);
+            }
+        }
     }
     dirs::document_dir().and_then(|p| p.to_str().map(String::from))
 }
@@ -175,6 +280,7 @@ pub fn run(_test_convert: bool) {
             default_cache_paths,
             default_output_dir,
             default_cache_dialog_path,
+            open_folder,
             report_test_result,
         ])
         .setup(move |app| {
