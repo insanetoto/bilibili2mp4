@@ -43,6 +43,7 @@ jobs:
       - name: Build
         run: npm run tauri build
         env:
+          CI: true
           TAURI_TARGET: ${{ matrix.rust_target }}
 
       - name: Upload artifact (macOS aarch64)
